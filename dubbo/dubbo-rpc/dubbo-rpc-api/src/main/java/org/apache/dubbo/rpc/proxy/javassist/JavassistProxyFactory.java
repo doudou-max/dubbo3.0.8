@@ -39,15 +39,19 @@ public class JavassistProxyFactory extends AbstractProxyFactory {
     public <T> Invoker<T> getInvoker(T proxy, Class<T> type, URL url) {
         // TODO Wrapper cannot handle this scenario correctly: the classname contains '$'
         /*
+            spring 中的 BeanWrapper 对 bean 做一层封装，通过 BeanWrapper 对 bean 进行操作处理
             UserModel um = new UserModel();  [name, age, sex]
             BeanWrapper[um]
 
             um.run();
 
-            // Invoker(com.jiangzh.course.dubbo.producer.impl.HelloServiceImpl | proxy);
+            使用 反射、代理、共用类型内容 的时候不知道具体的对象是谁，将对象封装成 wrapper，
+            通过 wrapper 对对象进行操作
          */
         final Wrapper wrapper = Wrapper.getWrapper(proxy.getClass().getName().indexOf('$') < 0 ? proxy.getClass() : type);
         return new AbstractProxyInvoker<T>(proxy, type, url) {
+            // 将未知的对象封装成 invoke 对象
+            // 服务调用也是通过 invoke 进行对象的处理
             @Override
             protected Object doInvoke(T proxy, String methodName,
                                       Class<?>[] parameterTypes,

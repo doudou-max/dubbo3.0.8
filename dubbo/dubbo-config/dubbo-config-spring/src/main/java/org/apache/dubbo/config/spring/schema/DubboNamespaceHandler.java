@@ -44,6 +44,8 @@ import static org.apache.dubbo.config.spring.util.DubboBeanUtils.registerCommonB
 /**
  * DubboNamespaceHandler
  *
+ * NamespaceHandler 的 init()
+ *
  * @export
  */
 public class DubboNamespaceHandler extends NamespaceHandlerSupport implements ConfigurableSourceBeanMetadataElement {
@@ -52,6 +54,9 @@ public class DubboNamespaceHandler extends NamespaceHandlerSupport implements Co
         Version.checkDuplicate(DubboNamespaceHandler.class);
     }
 
+    /**
+     * 初始化相关 bean 对象
+     */
     // <dubbo:application ../>
     // <dubbo:registry .. />
     // <dubbo:service ../>

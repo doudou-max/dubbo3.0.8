@@ -192,8 +192,15 @@ public class RegistryProtocol implements Protocol {
             registered));
     }
 
-    /*
-        服务注册的起点
+    /**
+     * 远程服务调用的服务暴露实现
+     * 这里的 RegistryProtocol 是 provider 服务启动的时候，通过 netty 将服务注册的消息通知给 consumer
+     * consumer 可以对服务进行调用了 (和写数据到 zk 没有关系)
+     *
+     * @param originInvoker
+     * @param <T>
+     * @return
+     * @throws RpcException
      */
     @Override
     public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
@@ -267,15 +274,18 @@ public class RegistryProtocol implements Protocol {
         return serviceConfigurationListener.overrideUrl(providerUrl);
     }
 
-    /*
-        本地服务暴露
+    /**
+     * 本地服务暴露
      */
     @SuppressWarnings("unchecked")
     private <T> ExporterChangeableWrapper<T> doLocalExport(final Invoker<T> originInvoker, URL providerUrl) {
-        String key = getCacheKey(originInvoker);  // key = com.jiangzh.course.dubbo.service.HelloServiceAPI:20880
+
+        // key: org.apache.dubbo.demo.DemoService.sayHello:20880
+        String key = getCacheKey(originInvoker);
 
         return (ExporterChangeableWrapper<T>) bounds.computeIfAbsent(key, s -> {
             Invoker<?> invokerDelegate = new InvokerDelegate<>(originInvoker, providerUrl);
+            // 这里的 export 会调用到 DubboProtocol (SPI 配置 protocol 为 Dubbo)
             return new ExporterChangeableWrapper<>((Exporter<T>) protocol.export(invokerDelegate), originInvoker);
         });
     }
@@ -449,6 +459,9 @@ public class RegistryProtocol implements Protocol {
         return key;
     }
 
+    /**
+     * 代理对象刷新
+     */
     @Override
     @SuppressWarnings("unchecked")
     public <T> Invoker<T> refer(Class<T> type, URL url) throws RpcException {
@@ -463,14 +476,19 @@ public class RegistryProtocol implements Protocol {
         String group = qs.get(GROUP_KEY);
         if (group != null && group.length() > 0) {
             if ((COMMA_SPLIT_PATTERN.split(group)).length > 1 || "*".equals(group)) {
+                // 真正执行刷新操作
                 return doRefer(Cluster.getCluster(MergeableCluster.NAME), registry, type, url, qs);
             }
         }
 
         Cluster cluster = Cluster.getCluster(qs.get(CLUSTER_KEY));
+        // 真正执行刷新操作，debug 看这里
         return doRefer(cluster, registry, type, url, qs);
     }
 
+    /**
+     * 执行刷新操作
+     */
     protected <T> Invoker<T> doRefer(Cluster cluster, Registry registry, Class<T> type, URL url, Map<String, String> parameters) {
         Map<String, Object> consumerAttribute = new HashMap<>(url.getAttributes());
         consumerAttribute.remove(REFER_KEY);
@@ -482,7 +500,9 @@ public class RegistryProtocol implements Protocol {
             parameters,
             consumerAttribute);
         url = url.putAttribute(CONSUMER_URL_KEY, consumerUrl);
+        // 获取 invoke
         ClusterInvoker<T> migrationInvoker = getMigrationInvoker(this, cluster, registry, type, url, consumerUrl);
+        // 代理的拦截器调用，debug 看这里
         return interceptInvoker(migrationInvoker, url, consumerUrl, url);
     }
 
@@ -494,12 +514,17 @@ public class RegistryProtocol implements Protocol {
         return new ServiceDiscoveryMigrationInvoker<T>(registryProtocol, cluster, registry, type, url, consumerUrl);
     }
 
+    /**
+     * 拦截 invoke
+     */
     protected <T> Invoker<T> interceptInvoker(ClusterInvoker<T> invoker, URL url, URL consumerUrl, URL registryURL) {
+        // 获取所有 protocol listener
         List<RegistryProtocolListener> listeners = findRegistryProtocolListeners(url);
         if (CollectionUtils.isEmpty(listeners)) {
             return invoker;
         }
 
+        // 循环调用监听器的 onRefer
         for (RegistryProtocolListener listener : listeners) {
             listener.onRefer(this, invoker, consumerUrl, registryURL);
         }
@@ -511,12 +536,19 @@ public class RegistryProtocol implements Protocol {
         return doCreateInvoker(directory, cluster, registry, type);
     }
 
+    /**
+     * 获取 Invoker，进行真正的订阅
+     */
     public <T> ClusterInvoker<T> getInvoker(Cluster cluster, Registry registry, Class<T> type, URL url) {
         // FIXME, this method is currently not used, create the right registry before enable.
         DynamicDirectory<T> directory = new RegistryDirectory<>(type, url);
+        // 进入订阅
         return doCreateInvoker(directory, cluster, registry, type);
     }
 
+    /**
+     * 创建 Invoker
+     */
     protected <T> ClusterInvoker<T> doCreateInvoker(DynamicDirectory<T> directory, Cluster cluster, Registry registry, Class<T> type) {
         directory.setRegistry(registry);
         directory.setProtocol(protocol);
@@ -532,6 +564,8 @@ public class RegistryProtocol implements Protocol {
         directory.buildRouterChain(urlToRegistry);
 
         // 真正进入订阅流程
+        //    接口级订阅：RegistryDirectory
+        //    服务级订阅：ServiceDiscoveryRegistryDirectory
         directory.subscribe(toSubscribeUrl(urlToRegistry));
 
         return (ClusterInvoker<T>) cluster.join(directory);

@@ -1085,6 +1085,7 @@ public class DubboBootstrap {
 
     /**
      * Start the bootstrap
+     * 启动 DubboBootstrap
      */
     public DubboBootstrap start() {
         if (started.compareAndSet(false, true)) {
@@ -1092,12 +1093,15 @@ public class DubboBootstrap {
             shutdown.set(false);
             awaited.set(false);
 
+            // 本地的一些初始化操作，还没操作注册中心
             initialize();
+
             if (logger.isInfoEnabled()) {
                 logger.info(NAME + " is starting...");
             }
             // 1. export Dubbo Services
-            // 对应Provider注册流程
+            // 对应 provider 注册流程 (这里注册还没有向 zk 写数据)，这里可以理解成：dubbo 对 provider 服务进行暴露，可以进行调用，
+            // 但是 consumer 还不知道，需要通过下方的 referService 将 provider 信息写到 zk，通过 notify 通知给 consumer
             exportServices();
 
             // If register consumer instance or has exported services
@@ -1108,7 +1112,8 @@ public class DubboBootstrap {
                 registerServiceInstance();
             }
 
-            // 对应Consumer的订阅流程
+            // provider 启动的时候，会进行一个刷新操作，告诉消费端有新的 provider 注册上来，对应的 consumer的订阅流程
+            // 刷新服务操作会向 zk 中写数据，并且异步(notify) 通知 consumer 有新的 provider
             referServices();
 
             // wait async export / refer finish if needed
@@ -1357,7 +1362,7 @@ public class DubboBootstrap {
     }
 
     private void exportServices() {
-        for (ServiceConfigBase sc : configManager.getServices()) {
+        for (ServiceConfigBase sc : configManager.getServices()) {      // 从配置管理中获取所有的服务配置
             // TODO, compatible with ServiceConfig.export()
             ServiceConfig<?> serviceConfig = (ServiceConfig<?>) sc;
             serviceConfig.setBootstrap(this);
@@ -1365,6 +1370,7 @@ public class DubboBootstrap {
                 serviceConfig.refresh();
             }
 
+            // 是否异步初始化
             if (sc.shouldExportAsync()) {
                 ExecutorService executor = executorRepository.getServiceExportExecutor();
                 CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
@@ -1379,7 +1385,9 @@ public class DubboBootstrap {
                 }, executor);
 
                 asyncExportingFutures.add(future);
-            } else {
+            }
+            // 非异步初始化
+            else {
                 if (!sc.isExported()) {
                     sc.export();
                     exportedServices.add(sc);
@@ -1403,12 +1411,16 @@ public class DubboBootstrap {
         exportedServices.clear();
     }
 
+    /**
+     * 刷新服务操作
+     */
     private void referServices() {
         if (cache == null) {
             cache = ReferenceConfigCache.getCache();
         }
         // <dubbo:reference interface="" />
-        configManager.getReferences().forEach(rc -> {
+        Collection<ReferenceConfigBase<?>> references = configManager.getReferences();
+        references.forEach(rc -> {
             // TODO, compatible with  ReferenceConfig.refer()
             ReferenceConfig<?> referenceConfig = (ReferenceConfig<?>) rc;
             referenceConfig.setBootstrap(this);
@@ -1416,7 +1428,9 @@ public class DubboBootstrap {
                 referenceConfig.refresh();
             }
 
+            // 刷新配置初始化 (启动过程肯定需要初始化)
             if (rc.shouldInit()) {
+                // 是否异步刷新
                 if (rc.shouldReferAsync()) {
                     ExecutorService executor = executorRepository.getServiceReferExecutor();
                     CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
@@ -1429,6 +1443,7 @@ public class DubboBootstrap {
 
                     asyncReferringFutures.add(future);
                 } else {
+                    // 不是异步刷新就到缓存这里，debug 看这里
                     cache.get(rc);
                 }
             }

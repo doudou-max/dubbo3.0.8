@@ -225,6 +225,13 @@ public class ConfigValidationUtils {
         return genCompatibleRegistries(registryList, provider);
     }
 
+    /**
+     * 这里处理 dubbo 双版本的 provider
+     *
+     * @param registryList
+     * @param provider
+     * @return
+     */
     private static List<URL> genCompatibleRegistries(List<URL> registryList, boolean provider) {
         List<URL> result = new ArrayList<>(registryList.size());
         registryList.forEach(registryURL -> {
@@ -237,6 +244,7 @@ public class ConfigValidationUtils {
                         registerMode = DEFAULT_REGISTER_MODE_INSTANCE;
                     }
                     result.add(registryURL);
+                    // 构建 service-discovery-service://xxx
                     if (DEFAULT_REGISTER_MODE_ALL.equalsIgnoreCase(registerMode)
                         && registryNotExists(registryURL, registryList, REGISTRY_PROTOCOL)) {
                         URL interfaceCompatibleRegistryURL = URLBuilder.from(registryURL)

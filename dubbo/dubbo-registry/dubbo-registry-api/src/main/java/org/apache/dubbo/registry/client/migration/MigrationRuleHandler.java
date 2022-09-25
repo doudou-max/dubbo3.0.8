@@ -37,10 +37,15 @@ public class MigrationRuleHandler<T> {
         this.consumerURL = url;
     }
 
-    /*
-        三种订阅模式的核心方法
+    /**
+     * 三种订阅模式的核心方法
+     * dubbo.application.service-discovery.migration 三种类型：
+     *    FORCE_APPLICATION:只消费接口级
+     *    APPLICATION_FIRST:智能决策接口级/应用级，双订阅
+     *    FORCE_INTERFACE:只消费应用级地址
      */
     public synchronized void doMigrate(MigrationRule rule) {
+        // 接口级订阅
         if (migrationInvoker instanceof ServiceDiscoveryMigrationInvoker) {
             refreshInvoker(MigrationStep.FORCE_APPLICATION, 1.0f, rule);
             return;
@@ -58,12 +63,16 @@ public class MigrationRuleHandler<T> {
             logger.error("Failed to get step and threshold info from rule: " + rule, e);
         }
 
+        // 刷新 invoker，debug 看 if() 条件里面
         if (refreshInvoker(step, threshold, rule)) {
             // refresh success, update rule
             setMigrationRule(rule);
         }
     }
 
+    /**
+     * consumer 订阅处理
+     */
     private boolean refreshInvoker(MigrationStep step, Float threshold, MigrationRule newRule) {
         if (step == null || threshold == null) {
             throw new IllegalStateException("Step or threshold of migration rule cannot be null");
@@ -75,6 +84,7 @@ public class MigrationRuleHandler<T> {
             // 三种订阅模式的核心处理
             switch (step) {
                 case APPLICATION_FIRST:
+                    // ServiceDiscoveryMigrationInvoker.migrateToApplicationFirstInvoker()
                     migrationInvoker.migrateToApplicationFirstInvoker(newRule);
                     break;
                 case FORCE_APPLICATION:

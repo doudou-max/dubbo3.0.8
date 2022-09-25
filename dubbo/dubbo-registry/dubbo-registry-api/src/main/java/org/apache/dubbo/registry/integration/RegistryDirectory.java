@@ -99,11 +99,15 @@ public class RegistryDirectory<T> extends DynamicDirectory<T> {
         super(serviceType, url);
     }
 
+    /**
+     * 根据 url 进行订阅
+     */
     @Override
     public void subscribe(URL url) {
         setSubscribeUrl(url);
         CONSUMER_CONFIGURATION_LISTENER.addNotifyListener(this);
         referenceConfigurationListener = new ReferenceConfigurationListener(this, url);
+        // Apache 的订阅 AbstractRegistry、FailbackRegistry
         registry.subscribe(url, this);
     }
 

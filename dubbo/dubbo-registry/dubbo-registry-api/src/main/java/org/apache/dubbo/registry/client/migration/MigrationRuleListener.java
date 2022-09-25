@@ -198,6 +198,9 @@ public class MigrationRuleListener implements RegistryProtocolListener, Configur
 
     }
 
+    /**
+     * 刷新订阅
+     */
     @Override
     public void onRefer(RegistryProtocol registryProtocol, ClusterInvoker<?> invoker, URL consumerUrl, URL registryURL) {
         MigrationRuleHandler<?> migrationRuleHandler = handlers.computeIfAbsent((MigrationInvoker<?>) invoker, _key -> {
@@ -205,6 +208,7 @@ public class MigrationRuleListener implements RegistryProtocolListener, Configur
             return new MigrationRuleHandler<>((MigrationInvoker<?>) invoker, consumerUrl);
         });
 
+        // 刷新操作
         migrationRuleHandler.doMigrate(rule);
     }
 

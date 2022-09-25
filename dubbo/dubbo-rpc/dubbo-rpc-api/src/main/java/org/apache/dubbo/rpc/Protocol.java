@@ -37,6 +37,9 @@ public interface Protocol {
     int getDefaultPort();
 
     /**
+     * 将 provider 的服务进行暴露，服务开放对应的端口进行对应的连接，经过这一步操作之后可以进行服务的通讯
+     * 需留意：服务注册并不是说把服务的数据写到 zk 中，而是开放了服务，可以进行连接通讯
+     *
      * Export service for remote invocation: <br>
      * 1. Protocol should record request source address after receive a request:
      * RpcContext.getServerAttachment().setRemoteAddress();<br>

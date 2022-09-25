@@ -68,7 +68,7 @@ class InjvmInvoker<T> extends AbstractInvoker<T> {
 
     @Override
     public Result doInvoke(Invocation invocation) throws Throwable {
-        // 从exporter内存中获取对应的exporter
+        // 从 exporter 内存中获取对应的 exporter
         Exporter<?> exporter = InjvmProtocol.getExporter(exporterMap, getUrl());
         if (exporter == null) {
             throw new RpcException("Service [" + key + "] not found.");
@@ -80,6 +80,7 @@ class InjvmInvoker<T> extends AbstractInvoker<T> {
         if (serverHasToken) {
             invocation.setAttachment(Constants.TOKEN_KEY, serverURL.getParameter(Constants.TOKEN_KEY));
         }
+        // 异步执行
         if (isAsync(exporter.getInvoker().getUrl(), getUrl())) {
             ((RpcInvocation) invocation).setInvokeMode(InvokeMode.ASYNC);
             // use consumer executor
@@ -97,8 +98,11 @@ class InjvmInvoker<T> extends AbstractInvoker<T> {
             AsyncRpcResult result = new AsyncRpcResult(appResponseFuture, invocation);
             result.setExecutor(executor);
             return result;
-        } else {
-            // com.jiangzh.course.dubbo.producer.impl.HelloServiceImpl.sayHello | proxy
+        }
+        // 非异步执行
+        else {
+            // 通过代理对象进行方法调用
+            // org.apache.dubbo.DemoService.sayHello() | proxy
             return exporter.getInvoker().invoke(invocation);
         }
     }

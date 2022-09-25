@@ -209,6 +209,9 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         serviceMetadata.generateServiceKey();
     }
 
+    /**
+     * dubbo provider 启动流程都要经过这里
+     */
     public synchronized void export() {
         if (this.shouldExport() && !this.exported) {
             this.init();
@@ -226,9 +229,12 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                 return;
             }
 
+            // 是否延迟启动
             if (shouldDelay()) {
                 DELAY_EXPORT_EXECUTOR.schedule(this::doExport, getDelay(), TimeUnit.MILLISECONDS);
-            } else {
+            }
+            // 非延迟启动
+            else {
                 doExport();
             }
 
@@ -338,7 +344,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         if (StringUtils.isEmpty(path)) {
             path = interfaceName;
         }
-        doExportUrls();
+        doExportUrls();     // 输出 url
         exported();
     }
 
@@ -356,6 +362,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         );
 
         /*
+         // 处理 provider 的 url (处理双版本的 provider)
          // service-discovery-registry://localhost:2181/org.apache.dubbo.registry.RegistryService?application=hello-world-producer&client=curator&dubbo=2.0.2&pid=13796&registry=zookeeper&release=3.0.1&timestamp=1627915332986
          // registry://localhost:2181/org.apache.dubbo.registry.RegistryService?application=hello-world-producer&client=curator&dubbo=2.0.2&pid=13796&registry=zookeeper&release=3.0.1&timestamp=1627915332986
          */
@@ -367,11 +374,18 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                     .orElse(path), group, version);
             // In case user specified path, register service one more time to map it to path.
             repository.registerService(pathKey, interfaceClass);
+            // 服务注册 (服务注册并不是把 provider 的信息写到 zk 中，而是暴露服务，可以进行一个调用了)
             doExportUrlsFor1Protocol(protocolConfig, registryURLs);
         }
     }
 
 
+    /**
+     * 将 url 信息转成 map
+     *
+     * @param protocolConfig
+     * @param registryURLs
+     */
     private void doExportUrlsFor1Protocol(ProtocolConfig protocolConfig, List<URL> registryURLs) {
         Map<String, String> map = buildAttributes(protocolConfig);
 
@@ -380,6 +394,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
 
         URL url = buildUrl(protocolConfig, registryURLs, map);
 
+        // 注册 provider 的 url
         exportUrl(url, registryURLs);
     }
 
@@ -542,13 +557,16 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         if (!SCOPE_NONE.equalsIgnoreCase(scope)) {
 
             // export to local if the config is not remote (export to remote only when config is remote)
+            // 通过 jvm 内服务调用，即本地服务调用
             if (!SCOPE_REMOTE.equalsIgnoreCase(scope)) {
-                // 本地服务暴露
+                // 本地服务暴露，provider 启动会先暴露服务
                 exportLocal(url);
             }
 
             // export to remote if the config is not local (export to local only when config is local)
+            // 远程服务调用，跨 jvm 调用
             if (!SCOPE_LOCAL.equalsIgnoreCase(scope)) {
+                // 远程服务暴露，provider 启动会先暴露服务
                 url = exportRemote(url, registryURLs);
                 MetadataUtils.publishServiceDefinition(url);
             }
@@ -609,16 +627,24 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         return url;
     }
 
+    /**
+     * 将本地服务进行暴露
+     *
+     * @param url
+     * @param withMetaData
+     */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void doExportUrl(URL url, boolean withMetaData) {
         // com.jiangzh.course.dubbo.service.HelloServiceAPI的代理类
         // AbstractProxyInvoker = JavassistProxyFactory.getInvoker
+        // 获取 invoke (将对象通过 Wrapper 进行包装，包装成 Invoke 返回)
         Invoker<?> invoker = PROXY_FACTORY.getInvoker(ref, (Class) interfaceClass, url);
         if (withMetaData) {
             invoker = new DelegateProviderMetaDataInvoker(invoker, this);
         }
-        // PROTOCOL = InjvmProtocol
-        // exporter(invoker(wrapper(com.jiangzh.course.dubbo.producer.impl.HelloServiceImpl  | proxy)))
+        // 这里会调用两次，注册 /services  和  /dubbo
+        // 这里的 Protocol 的类型会根据 Dubbo 的 SPI 动态获取，例如：RegistryProtocol(远程服务调用) InjvmProtocol(本地服务调用)
+        // 这里将 Invoke 包装成 Exporter (Dubbo 的通讯方式会通过 DubboProtocol 进行服务的暴露，就像服务开放端口，客户端可以进行连接通讯，而不是写数据到 zk)
         Exporter<?> exporter = PROTOCOL.export(invoker);
         // 暴露的服务列表
         exporters.add(exporter);
@@ -626,6 +652,8 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
 
 
     /**
+     * 本地服务暴露
+     * 本地服务调用就是 injvm
      * always export injvm
      */
     private void exportLocal(URL url) {
@@ -635,6 +663,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                 .setHost(LOCALHOST_VALUE)
                 .setPort(0)
                 .build();
+        // 对 url 进行暴露
         doExportUrl(local, false);
         logger.info("Export dubbo service " + interfaceClass.getName() + " to local registry url : " + local);
     }

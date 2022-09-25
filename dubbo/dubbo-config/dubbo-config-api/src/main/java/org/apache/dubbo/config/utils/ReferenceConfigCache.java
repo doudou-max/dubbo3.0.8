@@ -110,6 +110,7 @@ public class ReferenceConfigCache {
         ConcurrentMap<String, Object> proxiesOfType = proxies.computeIfAbsent(type, _t -> new ConcurrentHashMap<>());
 
         return (T) proxiesOfType.computeIfAbsent(key, _k -> {
+            // 获取刷新配置，有不同的实现，看 ReferenceConfig 的实现
             Object proxy = referenceConfig.get();
             referredReferences.put(key, referenceConfig);
             return proxy;

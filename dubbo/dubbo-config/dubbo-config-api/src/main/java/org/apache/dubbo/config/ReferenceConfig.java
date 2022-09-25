@@ -195,11 +195,17 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
         this.services = services;
     }
 
+    /**
+     * 获取刷新配置
+     *
+     * @return
+     */
     public synchronized T get() {
         if (destroyed) {
             throw new IllegalStateException("The invoker of ReferenceConfig(" + url + ") has already destroyed!");
         }
 
+        // 刷新配置为 null，进行初始化
         if (ref == null) {
             init();
         }
@@ -224,6 +230,9 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
         ref = null;
     }
 
+    /**
+     * 刷新配置初始化
+     */
     protected synchronized void init() {
         if (initialized) {
             return;
@@ -324,6 +333,9 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
 
         serviceMetadata.getAttachments().putAll(map);
 
+        // 上面都是一些设置
+
+        // debug 看这里
         // 创建ref的代理对象
         ref = createProxy(map);
 
@@ -338,16 +350,24 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
         checkInvokerAvailable();
     }
 
+    /**
+     * 创建代理对象
+     *
+     * @param map
+     * @return
+     */
     @SuppressWarnings({"unchecked", "rawtypes", "deprecation"})
     private T createProxy(Map<String, String> map) {
-        // 本地调用的情况
+        // 本地调用的情况 injvm
         if (shouldJvmRefer(map)) {
             URL url = new ServiceConfigURL(LOCAL_PROTOCOL, LOCALHOST_VALUE, 0, interfaceClass.getName()).addParameters(map);
             invoker = REF_PROTOCOL.refer(interfaceClass, url);
             if (logger.isInfoEnabled()) {
                 logger.info("Using injvm service " + interfaceClass.getName());
             }
-        } else {
+        }
+        // 非本地调用
+        else {
             urls.clear();
             // 直连提供者
             if (url != null && url.length() > 0) { // user specified URL, could be peer-to-peer address, or register center's address.
@@ -369,7 +389,8 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
                     }
                 }
             }
-            // 排除injvm 和 直连提供者
+            // 排除 injvm 和 直连提供者
+            // 远程服务调用
             else { // assemble URL from register center's configuration
                 // if protocols not injvm checkRegistry
                 if (!LOCAL_PROTOCOL.equalsIgnoreCase(getProtocol())) {
@@ -393,9 +414,12 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
                 }
             }
 
+            // if else 结束
+
             // 服务订阅和调用远程代理
             if (urls.size() == 1) {
-                // interfaceClass = com.jiangzh.course.HelloWorldServiceAPI
+                // invoker 就是生成的代理对象 org.apache.dubbo.study.StudyService
+                // debug 看 RegistryProtocol
                 invoker = REF_PROTOCOL.refer(interfaceClass, urls.get(0));
             } else {
                 List<Invoker<?>> invokers = new ArrayList<Invoker<?>>();
@@ -403,6 +427,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
                 for (URL url : urls) {
                     // For multi-registry scenarios, it is not checked whether each referInvoker is available.
                     // Because this invoker may become available later.
+                    // refer
                     invokers.add(REF_PROTOCOL.refer(interfaceClass, url));
 
                     if (UrlUtils.isRegistry(url)) {

@@ -44,16 +44,23 @@ public class ServiceDiscoveryMigrationInvoker<T> extends MigrationInvoker<T> {
 
     @Override
     public boolean migrateToForceInterfaceInvoker(MigrationRule newRule) {
+
         CountDownLatch latch = new CountDownLatch(0);
+
+        //刷新服务发现调用
         refreshServiceDiscoveryInvoker(latch);
 
         setCurrentAvailableInvoker(getServiceDiscoveryInvoker());
         return true;
     }
 
+    /**
+     * 通知 consumer 应用有 provider 刷新
+     */
     @Override
     public void migrateToApplicationFirstInvoker(MigrationRule newRule) {
         CountDownLatch latch = new CountDownLatch(0);
+        // 刷新服务发现
         refreshServiceDiscoveryInvoker(latch);
 
         setCurrentAvailableInvoker(getServiceDiscoveryInvoker());

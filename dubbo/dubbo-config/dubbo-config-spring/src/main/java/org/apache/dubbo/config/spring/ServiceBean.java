@@ -35,6 +35,8 @@ import org.springframework.context.ApplicationEventPublisherAware;
 
 /**
  * ServiceFactoryBean
+ * InitializingBean: afterPropertiesSet()
+ *     spring 初始化 bean 的时候，如果 bean 实现 InitializingBean 接口，会自动调用 afterPropertiesSet() 方法
  *
  * @export
  */

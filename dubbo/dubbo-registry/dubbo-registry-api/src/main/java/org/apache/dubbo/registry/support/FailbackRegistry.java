@@ -295,7 +295,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         removeFailedSubscribed(url, listener);
         try {
             // Sending a subscription request to the server side
-            // 调用具体的实现类
+            // 调用具体的实现类 ZookeeperRegistry
             doSubscribe(url, listener);
         } catch (Exception e) {
             Throwable t = e;

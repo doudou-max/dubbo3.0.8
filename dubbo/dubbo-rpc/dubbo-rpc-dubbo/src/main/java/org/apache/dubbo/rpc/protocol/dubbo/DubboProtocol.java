@@ -283,7 +283,8 @@ public class DubboProtocol extends AbstractProtocol {
         URL url = invoker.getUrl();  // dubbo://localhost:20880/xxx?xxx
 
         // export service.
-        String key = serviceKey(url);  // com.jiangzh.course.dubbo.service.HelloServiceAPI:20880
+        // key: study-provider/org.apache.dubbo.metadata.MetadataService:1.0.0:20880
+        String key = serviceKey(url);
         DubboExporter<T> exporter = new DubboExporter<T>(invoker, key, exporterMap);
         exporterMap.put(key, exporter);
 
@@ -301,13 +302,18 @@ public class DubboProtocol extends AbstractProtocol {
             }
         }
 
-        //  开启服务
+        // 开启服务
         openServer(url);
         optimizeSerialization(url);
 
         return exporter;
     }
 
+    /**
+     * 开启服务
+     *
+     * @param url
+     */
     private void openServer(URL url) {
         // find server.
         String key = url.getAddress();
@@ -315,10 +321,12 @@ public class DubboProtocol extends AbstractProtocol {
         boolean isServer = url.getParameter(IS_SERVER_KEY, true);
         if (isServer) {
             ProtocolServer server = serverMap.get(key);
+            // 双重检查判断
             if (server == null) {
                 synchronized (this) {
                     server = serverMap.get(key);
                     if (server == null) {
+                        // 创建服务
                         serverMap.put(key, createServer(url));
                     }
                 }
@@ -329,7 +337,13 @@ public class DubboProtocol extends AbstractProtocol {
         }
     }
 
+    /**
+     * 创建服务
+     * @param url
+     * @return
+     */
     private ProtocolServer createServer(URL url) {
+        // 构建 url 参数
         url = URLBuilder.from(url)
                 // send readonly event when server closes, it's enabled by default
                 .addParameterIfAbsent(CHANNEL_READONLYEVENT_SENT_KEY, Boolean.TRUE.toString())
@@ -343,8 +357,11 @@ public class DubboProtocol extends AbstractProtocol {
             throw new RpcException("Unsupported server type: " + str + ", url: " + url);
         }
 
+        // dubbo exchange
+        // 业务实体和请求实体转发
         ExchangeServer server;
         try {
+            // exchange bind
             server = Exchangers.bind(url, requestHandler);
         } catch (RemotingException e) {
             throw new RpcException("Fail to start server(url: " + url + ") " + e.getMessage(), e);

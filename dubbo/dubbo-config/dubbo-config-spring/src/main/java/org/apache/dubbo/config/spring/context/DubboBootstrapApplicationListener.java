@@ -37,6 +37,9 @@ import static org.springframework.util.ObjectUtils.nullSafeEquals;
  * The {@link ApplicationListener} for {@link DubboBootstrap}'s lifecycle when the {@link ContextRefreshedEvent}
  * and {@link ContextClosedEvent} raised
  *
+ * ApplicationListener 应用事件监听
+ * onApplicationEvent 监听事件，启动事件
+ *
  * @since 2.7.5
  */
 public class DubboBootstrapApplicationListener implements ApplicationListener, ApplicationContextAware, Ordered {
@@ -67,10 +70,11 @@ public class DubboBootstrapApplicationListener implements ApplicationListener, A
         }
         return dubboBootstrap;
     }
-
+    // spring 中的应用监听器，在实例化和初始化完成 bean 集合对象之后，调用 finishRefresh() 方法执行所有事件
     @Override
     public void onApplicationEvent(ApplicationEvent event) {
         if (isOriginalEventSource(event)) {
+            // dubbo 通过注解方式初始化
             if (event instanceof DubboAnnotationInitedEvent) {
                 // This event will be notified at AbstractApplicationContext.registerListeners(),
                 // init dubbo config beans before spring singleton beans
@@ -78,7 +82,10 @@ public class DubboBootstrapApplicationListener implements ApplicationListener, A
 
                 // All infrastructure config beans are loaded, initialize dubbo here
                 DubboBootstrap.getInstance().initialize();
-            } else if (event instanceof ApplicationContextEvent) {
+            }
+            // 非注解的方式初始化 (阅读源码通过该种方式)
+            else if (event instanceof ApplicationContextEvent) {
+                // 调用应用上下文的事件，调用 DubboBootstrap 的 start()
                 this.onApplicationContextEvent((ApplicationContextEvent) event);
             }
         }
@@ -104,13 +111,18 @@ public class DubboBootstrapApplicationListener implements ApplicationListener, A
         if (DubboBootstrapStartStopListenerSpringAdapter.applicationContext == null) {
             DubboBootstrapStartStopListenerSpringAdapter.applicationContext = event.getApplicationContext();
         }
+        // 事件刷新 (调用 DubboBootstrap 的 start)
         if (event instanceof ContextRefreshedEvent) {
-            onContextRefreshedEvent((ContextRefreshedEvent) event);
+            onContextRefreshedEvent((ContextRefreshedEvent) event);     // 调用这里
         } else if (event instanceof ContextClosedEvent) {
             onContextClosedEvent((ContextClosedEvent) event);
         }
     }
 
+    /**
+     * 通过 spring 的 事件发布方式
+     * @param event
+     */
     private void onContextRefreshedEvent(ContextRefreshedEvent event) {
         if (dubboBootstrap.getTakeoverMode() == BootstrapTakeoverMode.SPRING) {
             dubboBootstrap.start();

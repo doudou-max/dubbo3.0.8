@@ -172,9 +172,11 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
         RpcInvocation invocation = (RpcInvocation) inv;
 
         // prepare rpc invocation
+        // 准备 invoke 执行需要参数
         prepareInvocation(invocation);
 
         // do invoke rpc invocation and return async result
+        // 执行 invoke 调用
         AsyncRpcResult asyncResult = doInvokeAndReturn(invocation);
 
         // wait rpc result if sync
@@ -227,9 +229,16 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
         }
     }
 
+    /**
+     * 执行 invoke 和 return
+     * @param invocation
+     * @return
+     */
     private AsyncRpcResult doInvokeAndReturn(RpcInvocation invocation) {
         AsyncRpcResult asyncResult;
         try {
+            // invoke 调用
+            // 本地 invoke 调用：InjvmI女哦可
             asyncResult = (AsyncRpcResult) doInvoke(invocation);
         } catch (InvocationTargetException e) {
             Throwable te = e.getTargetException();

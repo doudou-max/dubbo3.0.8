@@ -31,6 +31,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 
 /**
+ * 所有服务调用的入口
  * InvokerHandler
  */
 public class InvokerInvocationHandler implements InvocationHandler {
@@ -61,6 +62,15 @@ public class InvokerInvocationHandler implements InvocationHandler {
         }
     }
 
+    /**
+     * 服务调用方法
+     *
+     * @param proxy   代理的对象
+     * @param method  调用的方法
+     * @param args    调用的参数
+     * @return
+     * @throws Throwable
+     */
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         if (method.getDeclaringClass() == Object.class) {
@@ -93,6 +103,7 @@ public class InvokerInvocationHandler implements InvocationHandler {
             rpcInvocation.put(Constants.METHOD_MODEL, consumerModel.getMethodModel(method));
         }
 
+        // 这个 Invoker 是 AbstractInvoke
         return invoker.invoke(rpcInvocation).recreate();
     }
 }

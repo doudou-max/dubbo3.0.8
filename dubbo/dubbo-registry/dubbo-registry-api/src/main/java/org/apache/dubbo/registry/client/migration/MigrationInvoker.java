@@ -233,6 +233,11 @@ public class MigrationInvoker<T> implements MigrationClusterInvoker<T> {
         return false;
     }
 
+    /**
+     * 进行正则订阅操作
+     *
+     * @param newRule
+     */
     @Override
     public void migrateToApplicationFirstInvoker(MigrationRule newRule) {
         CountDownLatch latch = new CountDownLatch(0);
@@ -414,6 +419,11 @@ public class MigrationInvoker<T> implements MigrationClusterInvoker<T> {
         }
     }
 
+    /**
+     * 刷新服务调用
+     *
+     * @param latch
+     */
     protected void refreshServiceDiscoveryInvoker(CountDownLatch latch) {
         clearListener(serviceDiscoveryInvoker);
         if (needRefresh(serviceDiscoveryInvoker)) {
@@ -424,6 +434,7 @@ public class MigrationInvoker<T> implements MigrationClusterInvoker<T> {
             if (serviceDiscoveryInvoker != null) {
                 serviceDiscoveryInvoker.destroy();
             }
+            // 获取服务发现调用 RegistryProtocol
             serviceDiscoveryInvoker = registryProtocol.getServiceDiscoveryInvoker(cluster, registry, type, url);
         }
         setListener(serviceDiscoveryInvoker, () -> {

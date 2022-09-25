@@ -305,6 +305,9 @@ public abstract class AbstractRegistry implements Registry {
         registered.remove(url);
     }
 
+    /**
+     * 订阅操作
+     */
     @Override
     public void subscribe(URL url, NotifyListener listener) {
         if (url == null) {
