@@ -65,25 +65,40 @@ public class ExchangeCodec extends TelnetCodec {
         return MAGIC;
     }
 
+    /**
+     * encode
+     * consumer请求 和 provider响应 需要encode
+     */
     @Override
     public void encode(Channel channel, ChannelBuffer buffer, Object msg) throws IOException {
+        // request 编码
         if (msg instanceof Request) {
             encodeRequest(channel, buffer, (Request) msg);
-        } else if (msg instanceof Response) {
+        }
+        // response 编码
+        else if (msg instanceof Response) {
             encodeResponse(channel, buffer, (Response) msg);
         } else {
             super.encode(channel, buffer, msg);
         }
     }
 
+    /**
+     * decode
+     * provider接收 和 consumer接收 需要 decode
+     */
     @Override
     public Object decode(Channel channel, ChannelBuffer buffer) throws IOException {
         int readable = buffer.readableBytes();
         byte[] header = new byte[Math.min(readable, HEADER_LENGTH)];
         buffer.readBytes(header);
+        // decode 实现
         return decode(channel, buffer, readable, header);
     }
 
+    /**
+     * decode 处理
+     */
     @Override
     protected Object decode(Channel channel, ChannelBuffer buffer, int readable, byte[] header) throws IOException {
         // check magic number.
@@ -129,6 +144,7 @@ public class ExchangeCodec extends TelnetCodec {
         ChannelBufferInputStream is = new ChannelBufferInputStream(buffer, len);
 
         try {
+            // 解析实体对象 debug 看这里
             return decodeBody(channel, is, header);
         } finally {
             if (is.available() > 0) {
@@ -144,6 +160,9 @@ public class ExchangeCodec extends TelnetCodec {
         }
     }
 
+    /**
+     * 解析实体对象
+     */
     protected Object decodeBody(Channel channel, InputStream is, byte[] header) throws IOException {
         byte flag = header[2], proto = (byte) (flag & SERIALIZATION_MASK);
         // get request id.
@@ -160,6 +179,7 @@ public class ExchangeCodec extends TelnetCodec {
             try {
                 if (status == Response.OK) {
                     Object data;
+                    // response 是 event 类型
                     if (res.isEvent()) {
                         byte[] eventPayload = CodecSupport.getPayload(is);
                         if (CodecSupport.isHeartBeat(eventPayload, proto)) {
@@ -168,7 +188,10 @@ public class ExchangeCodec extends TelnetCodec {
                         } else {
                             data = decodeEventData(channel, CodecSupport.deserialize(channel.getUrl(), new ByteArrayInputStream(eventPayload), proto), eventPayload);
                         }
-                    } else {
+                    }
+                    // response 不是 event 类型，普通业务类型
+                    else {
+                        // decode 业务数据
                         data = decodeResponseData(channel, CodecSupport.deserialize(channel.getUrl(), is, proto), getRequestData(id));
                     }
                     res.setResult(data);
@@ -223,6 +246,9 @@ public class ExchangeCodec extends TelnetCodec {
         return req.getData();
     }
 
+    /**
+     * request 请求 encode
+     */
     protected void encodeRequest(Channel channel, ChannelBuffer buffer, Request req) throws IOException {
         Serialization serialization = getSerialization(channel, req);
         // header.
@@ -240,7 +266,7 @@ public class ExchangeCodec extends TelnetCodec {
             header[2] |= FLAG_EVENT;
         }
 
-        // set request id.
+        // set request id. 唯一请求id
         Bytes.long2bytes(req.getId(), header, 4);
 
         // encode request data.
@@ -253,9 +279,12 @@ public class ExchangeCodec extends TelnetCodec {
             bos.write(CodecSupport.getNullBytesOf(serialization));
         } else {
             ObjectOutput out = serialization.serialize(channel.getUrl(), bos);
+            // request 是一个 event
             if (req.isEvent()) {
                 encodeEventData(channel, out, req.getData());
-            } else {
+            }
+            // request 是一个业务数据请求 DubboCodec
+            else {
                 encodeRequestData(channel, out, req.getData(), req.getVersion());
             }
             out.flushBuffer();
@@ -276,6 +305,9 @@ public class ExchangeCodec extends TelnetCodec {
         buffer.writerIndex(savedWriteIndex + HEADER_LENGTH + len);
     }
 
+    /**
+     * response 响应 encode
+     */
     protected void encodeResponse(Channel channel, ChannelBuffer buffer, Response res) throws IOException {
         int savedWriteIndex = buffer.writerIndex();
         try {
@@ -390,8 +422,12 @@ public class ExchangeCodec extends TelnetCodec {
         }
     }
 
+    /**
+     * 解析 response 实体数据
+     */
     protected Object decodeResponseData(ObjectInput in) throws IOException {
         try {
+            // Hessian2 协议解析
             return in.readObject();
         } catch (ClassNotFoundException e) {
             throw new IOException(StringUtils.toString("Read object failed.", e));
@@ -444,10 +480,16 @@ public class ExchangeCodec extends TelnetCodec {
         return decodeRequestData(in);
     }
 
+    /**
+     * 解析响应实体数据
+     */
     protected Object decodeResponseData(Channel channel, ObjectInput in) throws IOException {
         return decodeResponseData(in);
     }
 
+    /**
+     * 解析实体数据
+     */
     protected Object decodeResponseData(Channel channel, ObjectInput in, Object requestData) throws IOException {
         return decodeResponseData(channel, in);
     }

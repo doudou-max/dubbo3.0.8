@@ -22,68 +22,26 @@ import org.apache.dubbo.common.config.ConfigurationUtils;
 import org.apache.dubbo.common.extension.ExtensionLoader;
 import org.apache.dubbo.common.serialize.support.SerializableClassRegistry;
 import org.apache.dubbo.common.serialize.support.SerializationOptimizer;
-import org.apache.dubbo.common.utils.CollectionUtils;
-import org.apache.dubbo.common.utils.ConcurrentHashSet;
-import org.apache.dubbo.common.utils.ConfigUtils;
-import org.apache.dubbo.common.utils.NetUtils;
-import org.apache.dubbo.common.utils.StringUtils;
+import org.apache.dubbo.common.utils.*;
 import org.apache.dubbo.remoting.Channel;
 import org.apache.dubbo.remoting.RemotingException;
 import org.apache.dubbo.remoting.RemotingServer;
 import org.apache.dubbo.remoting.Transporter;
-import org.apache.dubbo.remoting.exchange.ExchangeChannel;
-import org.apache.dubbo.remoting.exchange.ExchangeClient;
-import org.apache.dubbo.remoting.exchange.ExchangeHandler;
-import org.apache.dubbo.remoting.exchange.ExchangeServer;
-import org.apache.dubbo.remoting.exchange.Exchangers;
+import org.apache.dubbo.remoting.exchange.*;
 import org.apache.dubbo.remoting.exchange.support.ExchangeHandlerAdapter;
-import org.apache.dubbo.rpc.Exporter;
-import org.apache.dubbo.rpc.Invocation;
-import org.apache.dubbo.rpc.Invoker;
-import org.apache.dubbo.rpc.Protocol;
-import org.apache.dubbo.rpc.ProtocolServer;
-import org.apache.dubbo.rpc.Result;
-import org.apache.dubbo.rpc.RpcContext;
-import org.apache.dubbo.rpc.RpcException;
-import org.apache.dubbo.rpc.RpcInvocation;
+import org.apache.dubbo.rpc.*;
 import org.apache.dubbo.rpc.protocol.AbstractProtocol;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
-import static org.apache.dubbo.common.constants.CommonConstants.GROUP_KEY;
-import static org.apache.dubbo.common.constants.CommonConstants.INTERFACE_KEY;
-import static org.apache.dubbo.common.constants.CommonConstants.LAZY_CONNECT_KEY;
-import static org.apache.dubbo.common.constants.CommonConstants.PATH_KEY;
-import static org.apache.dubbo.common.constants.CommonConstants.STUB_EVENT_KEY;
-import static org.apache.dubbo.common.constants.CommonConstants.VERSION_KEY;
-import static org.apache.dubbo.remoting.Constants.CHANNEL_READONLYEVENT_SENT_KEY;
-import static org.apache.dubbo.remoting.Constants.CLIENT_KEY;
-import static org.apache.dubbo.remoting.Constants.CODEC_KEY;
-import static org.apache.dubbo.remoting.Constants.CONNECTIONS_KEY;
-import static org.apache.dubbo.remoting.Constants.DEFAULT_HEARTBEAT;
-import static org.apache.dubbo.remoting.Constants.DEFAULT_REMOTING_CLIENT;
-import static org.apache.dubbo.remoting.Constants.HEARTBEAT_KEY;
-import static org.apache.dubbo.remoting.Constants.SERVER_KEY;
-import static org.apache.dubbo.rpc.Constants.DEFAULT_REMOTING_SERVER;
-import static org.apache.dubbo.rpc.Constants.DEFAULT_STUB_EVENT;
-import static org.apache.dubbo.rpc.Constants.IS_SERVER_KEY;
-import static org.apache.dubbo.rpc.Constants.STUB_EVENT_METHODS_KEY;
-import static org.apache.dubbo.rpc.protocol.dubbo.Constants.CALLBACK_SERVICE_KEY;
-import static org.apache.dubbo.rpc.protocol.dubbo.Constants.DEFAULT_SHARE_CONNECTIONS;
-import static org.apache.dubbo.rpc.protocol.dubbo.Constants.IS_CALLBACK_SERVICE;
-import static org.apache.dubbo.rpc.protocol.dubbo.Constants.ON_CONNECT_KEY;
-import static org.apache.dubbo.rpc.protocol.dubbo.Constants.ON_DISCONNECT_KEY;
-import static org.apache.dubbo.rpc.protocol.dubbo.Constants.OPTIMIZER_KEY;
-import static org.apache.dubbo.rpc.protocol.dubbo.Constants.SHARE_CONNECTIONS_KEY;
+import static org.apache.dubbo.common.constants.CommonConstants.*;
+import static org.apache.dubbo.remoting.Constants.*;
+import static org.apache.dubbo.rpc.Constants.*;
+import static org.apache.dubbo.rpc.protocol.dubbo.Constants.*;
 
 
 /**
@@ -278,6 +236,9 @@ public class DubboProtocol extends AbstractProtocol {
         return DEFAULT_PORT;
     }
 
+    /**
+     * 服务暴露，开放服务的连接，可以进行通讯
+     */
     @Override
     public <T> Exporter<T> export(Invoker<T> invoker) throws RpcException {
         URL url = invoker.getUrl();  // dubbo://localhost:20880/xxx?xxx
@@ -303,7 +264,7 @@ public class DubboProtocol extends AbstractProtocol {
         }
 
         // 开启服务
-        openServer(url);
+        openServer(url);        // debug 看这里
         optimizeSerialization(url);
 
         return exporter;
@@ -327,7 +288,7 @@ public class DubboProtocol extends AbstractProtocol {
                     server = serverMap.get(key);
                     if (server == null) {
                         // 创建服务
-                        serverMap.put(key, createServer(url));
+                        serverMap.put(key, createServer(url));      // debug 看这里
                     }
                 }
             } else {

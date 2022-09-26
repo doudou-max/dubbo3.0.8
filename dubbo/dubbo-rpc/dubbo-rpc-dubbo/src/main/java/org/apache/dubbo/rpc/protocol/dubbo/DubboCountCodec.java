@@ -35,11 +35,17 @@ public final class DubboCountCodec implements Codec2 {
 
     private DubboCodec codec = new DubboCodec();
 
+    /**
+     * dubbo request 默认编码实现
+     */
     @Override
     public void encode(Channel channel, ChannelBuffer buffer, Object msg) throws IOException {
         codec.encode(channel, buffer, msg);
     }
 
+    /**
+     * 解码
+     */
     @Override
     public Object decode(Channel channel, ChannelBuffer buffer) throws IOException {
         int save = buffer.readerIndex();

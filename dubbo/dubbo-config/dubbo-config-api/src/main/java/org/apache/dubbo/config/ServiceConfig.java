@@ -607,6 +607,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
                     }
                 }
 
+                // 真正暴露服务操作
                 doExportUrl(registryURL.putAttribute(EXPORT_KEY, url), true);
             }
 
