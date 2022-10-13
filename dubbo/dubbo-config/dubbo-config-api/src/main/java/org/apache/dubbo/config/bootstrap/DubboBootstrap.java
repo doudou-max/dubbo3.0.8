@@ -32,30 +32,8 @@ import org.apache.dubbo.common.utils.ArrayUtils;
 import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.common.utils.ConfigUtils;
 import org.apache.dubbo.common.utils.StringUtils;
-import org.apache.dubbo.config.AbstractConfig;
-import org.apache.dubbo.config.ApplicationConfig;
-import org.apache.dubbo.config.ConfigCenterConfig;
-import org.apache.dubbo.config.ConsumerConfig;
-import org.apache.dubbo.config.DubboShutdownHook;
-import org.apache.dubbo.config.MetadataReportConfig;
-import org.apache.dubbo.config.MetricsConfig;
-import org.apache.dubbo.config.ModuleConfig;
-import org.apache.dubbo.config.MonitorConfig;
-import org.apache.dubbo.config.ProtocolConfig;
-import org.apache.dubbo.config.ProviderConfig;
-import org.apache.dubbo.config.ReferenceConfig;
-import org.apache.dubbo.config.ReferenceConfigBase;
-import org.apache.dubbo.config.RegistryConfig;
-import org.apache.dubbo.config.ServiceConfig;
-import org.apache.dubbo.config.ServiceConfigBase;
-import org.apache.dubbo.config.SslConfig;
-import org.apache.dubbo.config.bootstrap.builders.ApplicationBuilder;
-import org.apache.dubbo.config.bootstrap.builders.ConsumerBuilder;
-import org.apache.dubbo.config.bootstrap.builders.ProtocolBuilder;
-import org.apache.dubbo.config.bootstrap.builders.ProviderBuilder;
-import org.apache.dubbo.config.bootstrap.builders.ReferenceBuilder;
-import org.apache.dubbo.config.bootstrap.builders.RegistryBuilder;
-import org.apache.dubbo.config.bootstrap.builders.ServiceBuilder;
+import org.apache.dubbo.config.*;
+import org.apache.dubbo.config.bootstrap.builders.*;
 import org.apache.dubbo.config.context.ConfigManager;
 import org.apache.dubbo.config.metadata.ConfigurableMetadataServiceExporter;
 import org.apache.dubbo.config.utils.ConfigValidationUtils;
@@ -77,14 +55,7 @@ import org.apache.dubbo.rpc.Protocol;
 import org.apache.dubbo.rpc.model.ApplicationModel;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -101,10 +72,7 @@ import static java.util.Collections.singletonList;
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 import static org.apache.dubbo.common.config.ConfigurationUtils.parseProperties;
 import static org.apache.dubbo.common.config.configcenter.DynamicConfigurationFactory.getDynamicConfigurationFactory;
-import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_METADATA_STORAGE_TYPE;
-import static org.apache.dubbo.common.constants.CommonConstants.DUBBO;
-import static org.apache.dubbo.common.constants.CommonConstants.REGISTRY_SPLIT_PATTERN;
-import static org.apache.dubbo.common.constants.CommonConstants.REMOTE_METADATA_STORAGE_TYPE;
+import static org.apache.dubbo.common.constants.CommonConstants.*;
 import static org.apache.dubbo.common.extension.ExtensionLoader.getExtensionLoader;
 import static org.apache.dubbo.common.function.ThrowableAction.execute;
 import static org.apache.dubbo.common.utils.StringUtils.isEmpty;
@@ -1102,10 +1070,15 @@ public class DubboBootstrap {
             // 1. export Dubbo Services
             // 对应 provider 注册流程 (这里注册还没有向 zk 写数据)，这里可以理解成：dubbo 对 provider 服务进行暴露，可以进行调用，
             // 但是 consumer 还不知道，需要通过下方的 referService 将 provider 信息写到 zk，通过 notify 通知给 consumer
+            // provider
+            //    暴露服务
             exportServices();
 
             // If register consumer instance or has exported services
-            if (isRegisterConsumerInstance() || hasExportedServices()) {
+            // 注册 consumer 处理
+            boolean isRegisterConsumerInstance = isRegisterConsumerInstance();
+            boolean hasExportedServices = hasExportedServices();
+            if (isRegisterConsumerInstance || hasExportedServices) {
                 // 2. export MetadataService
                 exportMetadataService();
                 // 3. Register the local ServiceInstance if required
@@ -1114,6 +1087,9 @@ public class DubboBootstrap {
 
             // provider 启动的时候，会进行一个刷新操作，告诉消费端有新的 provider 注册上来，对应的 consumer的订阅流程
             // 刷新服务操作会向 zk 中写数据，并且异步(notify) 通知 consumer 有新的 provider
+            // provider
+            //     往 zk 写数据
+            //     notify
             referServices();
 
             // wait async export / refer finish if needed
@@ -1361,8 +1337,15 @@ public class DubboBootstrap {
         }
     }
 
+    /**
+     * 服务注册
+     */
     private void exportServices() {
-        for (ServiceConfigBase sc : configManager.getServices()) {      // 从配置管理中获取所有的服务配置
+
+        // 获取配置列表
+        Collection<ServiceConfigBase> services = configManager.getServices();
+
+        for (ServiceConfigBase sc : services) {
             // TODO, compatible with ServiceConfig.export()
             ServiceConfig<?> serviceConfig = (ServiceConfig<?>) sc;
             serviceConfig.setBootstrap(this);
@@ -1389,6 +1372,7 @@ public class DubboBootstrap {
             // 非异步初始化
             else {
                 if (!sc.isExported()) {
+                    // 服务注册
                     sc.export();
                     exportedServices.add(sc);
                 }

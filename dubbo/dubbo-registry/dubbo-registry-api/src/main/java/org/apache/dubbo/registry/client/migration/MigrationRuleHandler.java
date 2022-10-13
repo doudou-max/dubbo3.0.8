@@ -63,7 +63,7 @@ public class MigrationRuleHandler<T> {
             logger.error("Failed to get step and threshold info from rule: " + rule, e);
         }
 
-        // 刷新 invoker，debug 看 if() 条件里面
+        // 刷新 invoker，debug 看 if 条件里面
         if (refreshInvoker(step, threshold, rule)) {
             // refresh success, update rule
             setMigrationRule(rule);
@@ -72,6 +72,9 @@ public class MigrationRuleHandler<T> {
 
     /**
      * consumer 订阅处理
+     *   APPLICATION_FIRST: 智能决策，双订阅
+     *   FORCE_APPLICATION: 只消费接口级地址
+     *   FORCE_INTERFACE: 只消费应用级地址
      */
     private boolean refreshInvoker(MigrationStep step, Float threshold, MigrationRule newRule) {
         if (step == null || threshold == null) {

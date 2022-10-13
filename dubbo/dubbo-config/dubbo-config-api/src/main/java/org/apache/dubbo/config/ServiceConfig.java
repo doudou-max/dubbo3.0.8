@@ -210,7 +210,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
     }
 
     /**
-     * dubbo provider 启动流程都要经过这里
+     * dubbo 服务注册
      */
     public synchronized void export() {
         if (this.shouldExport() && !this.exported) {
@@ -333,6 +333,9 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         checkAndUpdateSubConfigs();
     }
 
+    /**
+     * 执行服务注册
+     */
     protected synchronized void doExport() {
         if (unexported) {
             throw new IllegalStateException("The service " + interfaceClass.getName() + " has already unexported!");
@@ -344,7 +347,8 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         if (StringUtils.isEmpty(path)) {
             path = interfaceName;
         }
-        doExportUrls();     // 输出 url
+        // 根据 url 进行服务注册
+        doExportUrls();
         exported();
     }
 
