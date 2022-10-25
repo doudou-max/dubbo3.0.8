@@ -570,7 +570,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
             // export to remote if the config is not local (export to local only when config is local)
             // 远程服务调用，跨 jvm 调用
             if (!SCOPE_LOCAL.equalsIgnoreCase(scope)) {
-                // 远程服务暴露，provider 启动会先暴露服务
+                // 远程服务暴露，provider 启动会先暴露服务 (第二次注册 MetaServiceData)
                 url = exportRemote(url, registryURLs);
                 MetadataUtils.publishServiceDefinition(url);
             }
@@ -624,7 +624,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
             if (logger.isInfoEnabled()) {
                 logger.info("Export dubbo service " + interfaceClass.getName() + " to url " + url);
             }
-
+            // 真正暴露服务操作
             doExportUrl(url, true);
         }
 
@@ -647,7 +647,7 @@ public class ServiceConfig<T> extends ServiceConfigBase<T> {
         if (withMetaData) {
             invoker = new DelegateProviderMetaDataInvoker(invoker, this);
         }
-        // 这里会调用两次，注册 /services  和  /dubbo
+        // 这里会调用两次，注册 /dubbo 和 /services
         // 这里的 Protocol 的类型会根据 Dubbo 的 SPI 动态获取，例如：RegistryProtocol(远程服务调用) InjvmProtocol(本地服务调用)
         // 这里将 Invoke 包装成 Exporter (Dubbo 的通讯方式会通过 DubboProtocol 进行服务的暴露，就像服务开放端口，客户端可以进行连接通讯，而不是写数据到 zk)
         Exporter<?> exporter = PROTOCOL.export(invoker);

@@ -39,5 +39,20 @@
     <dubbo:reference id="dubboStudyService" check="false"
                      interface="org.apache.dubbo.demo.DubboStudyService"/>
 
+    <!-- <dubbo:reference id="producerService" interface="com.jiangzh.course.dubbo.service.HelloServiceAPI">-->
+    <!--    异步无返回示例 -->
+    <!--    <dubbo:method name="sayHello"  return="false" />-->
+    <!--    异步 -->
+    <!--    <dubbo:method name="sayHello"  async="true" />-->
+    <!--    异步转同步 -->
+    <!--    <dubbo:method name="sayHello"  />-->
+    <!--    事件回调 -->
+    <!--    <dubbo:method name="sayHello"-->
+    <!--                     async="true"-->
+    <!--                     onreturn="producerCallbackService.doReturn"-->
+    <!--                     onthrow="producerCallbackService.doThrow"-->
+    <!--                     oninvoke="producerCallbackService.doInvoker"/>-->
+    <!-- </dubbo:reference>-->
+
 
 </beans>

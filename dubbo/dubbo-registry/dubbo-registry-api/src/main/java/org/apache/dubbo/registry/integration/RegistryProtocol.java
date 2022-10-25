@@ -180,6 +180,9 @@ public class RegistryProtocol implements Protocol {
         return overrideListeners;
     }
 
+    /**
+     * ListenerRegistryWrapper
+     */
     private void register(Registry registry, URL registeredProviderUrl) {
         registry.register(registeredProviderUrl);
     }
@@ -238,7 +241,7 @@ public class RegistryProtocol implements Protocol {
         // decide if we need to delay publish
         boolean register = providerUrl.getParameter(REGISTER_KEY, true);
         if (register) {
-            // 服务提供者开始注册节点， 这个节点现在是与具体谁当注册中心无关
+            // 服务提供者开始向注册中心注册节点
             register(registry, registeredProviderUrl);
         }
 

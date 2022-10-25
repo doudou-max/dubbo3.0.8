@@ -191,6 +191,10 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     }
 
 
+    /**
+     * 向注册中心注册服务信息
+     * @param url
+     */
     @Override
     public void register(URL url) {
         if (!acceptable(url)) {

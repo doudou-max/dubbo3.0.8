@@ -1052,8 +1052,8 @@ public class DubboBootstrap {
     }
 
     /**
-     * Start the bootstrap
-     * 启动 DubboBootstrap
+     * Start the bootstrap，启动 DubboBootstrap
+     * 这里并不是代码执行到这里就操作
      */
     public DubboBootstrap start() {
         if (started.compareAndSet(false, true)) {
@@ -1342,7 +1342,7 @@ public class DubboBootstrap {
      */
     private void exportServices() {
 
-        // 获取配置列表
+        // 获取配置列表，定义在 dubbo中的服务配置，接口和实现类
         Collection<ServiceConfigBase> services = configManager.getServices();
 
         for (ServiceConfigBase sc : services) {
